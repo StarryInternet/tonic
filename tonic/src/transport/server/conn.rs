@@ -4,7 +4,7 @@ use tokio::net::TcpStream;
 
 #[cfg(feature = "tls")]
 use crate::transport::Certificate;
-#[cfg(feature = "tls")]
+#[cfg(any(unix, feature = "tls"))]
 use std::sync::Arc;
 #[cfg(feature = "tls")]
 use tokio_rustls::{rustls::Session, server::TlsStream};
@@ -94,6 +94,36 @@ impl Connected for TcpStream {
     fn connect_info(&self) -> Self::ConnectInfo {
         TcpConnectInfo {
             remote_addr: self.peer_addr().ok(),
+        }
+    }
+}
+
+/// Connection info for Unix domain socket streams.
+///
+/// This type will be accessible through [request extensions][ext] if you're using
+/// a unix stream.
+///
+/// See [`Connected`] for more details.
+///
+/// [ext]: crate::Request::extensions
+#[cfg(unix)]
+#[cfg_attr(docsrs, doc(cfg(unix)))]
+#[derive(Clone, Debug)]
+pub struct UdsConnectInfo {
+    /// Peer address. This will be "unnamed" for client unix sockets.
+    pub peer_addr: Option<Arc<tokio::net::unix::SocketAddr>>,
+    /// Process credentials for the unix socket.
+    pub peer_cred: Option<tokio::net::unix::UCred>,
+}
+
+#[cfg(unix)]
+impl Connected for tokio::net::UnixStream {
+    type ConnectInfo = UdsConnectInfo;
+
+    fn connect_info(&self) -> Self::ConnectInfo {
+        UdsConnectInfo {
+            peer_addr: self.peer_addr().ok().map(Arc::new),
+            peer_cred: self.peer_cred().ok(),
         }
     }
 }
