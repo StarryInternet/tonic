@@ -17,6 +17,9 @@ pub use conn::TlsConnectInfo;
 #[cfg(feature = "tls")]
 use super::service::TlsAcceptor;
 
+#[cfg(unix)]
+pub use conn::UdsConnectInfo;
+
 use incoming::TcpIncoming;
 
 #[cfg(feature = "tls")]
